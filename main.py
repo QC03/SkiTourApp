@@ -7,6 +7,7 @@ from PyQt6.QtGui import QAction
 from PyQt6.QtCore import Qt
 
 from db import init_db
+from ui_instructor import InstructorTab
 
 import sys
 
@@ -53,6 +54,15 @@ class MainWindow(QMainWindow):
 
         # Ready To Database
         init_db()
+
+        # Connect to ui_instructor.py
+        self.tabs = QTabWidget()
+        self.tabs.addTab(QWidget(), "예약")   # 다음 단계에서 구현
+        self.tabs.addTab(InstructorTab(), "강사")
+        self.tabs.addTab(QWidget(), "스케줄")
+        self.tabs.addTab(QWidget(), "출력")
+        self.tabs.addTab(QWidget(), "설정")
+        self.setCentralWidget(self.tabs)
 
     def closeEvent(self, e):
         # 이후 단계에서 저장/확인 로직을 추가할 수 있습니다.
