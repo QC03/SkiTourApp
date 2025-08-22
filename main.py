@@ -5,6 +5,7 @@ import db
 from ui_instructor import InstructorTab
 from ui_booking import BookingTab
 from ui_schedule import ScheduleTab
+from ui_report import ReportTab
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -18,6 +19,7 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(InstructorTab(), "강사")
         self.tabs.addTab(BookingTab(), "예약 관리")
         self.tabs.addTab(ScheduleTab(), "당일 스케줄")
+        self.tabs.addTab(ReportTab(), "예약 통계")
 
 
 def main():

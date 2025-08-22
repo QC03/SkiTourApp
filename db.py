@@ -153,11 +153,12 @@ def get_bookings_by_date(date: str):
     cur = conn.cursor()
     cur.execute("""
         SELECT b.id, c.name, c.phone, b.date, b.start_time, b.duration_minutes,
-               b.lesson_type, b.level, b.people_count, b.memo, b.instructor_id
+               b.lesson_type, b.level, b.people_count, b.memo, b.instructor_id,
+               i.name
         FROM bookings b
         LEFT JOIN customers c ON b.customer_id = c.id
+        LEFT JOIN instructors i ON b.instructor_id = i.id
         WHERE b.date = ?
-        ORDER BY b.start_time
     """, (date,))
     rows = cur.fetchall()
     conn.close()
