@@ -12,11 +12,9 @@ def init_db():
     CREATE TABLE IF NOT EXISTS instructors (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
-        can_ski BOOLEAN DEFAULT 1,
-        can_snowboard BOOLEAN DEFAULT 0,
-        can_teach_english BOOLEAN DEFAULT 0,
-        active BOOLEAN DEFAULT 1
-    );
+        phone TEXT,
+        note TEXT
+    )
     """)
 
     # 고객 테이블
@@ -24,12 +22,11 @@ def init_db():
     CREATE TABLE IF NOT EXISTS customers (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
-        phone TEXT UNIQUE,
-        email TEXT
-    );
+        phone TEXT
+    )
     """)
 
-    # 예약 테이블
+    # 예약(강습) 테이블
     cur.execute("""
     CREATE TABLE IF NOT EXISTS bookings (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -41,28 +38,17 @@ def init_db():
         level TEXT,
         people_count INTEGER DEFAULT 1,
         memo TEXT,
-        FOREIGN KEY(customer_id) REFERENCES customers(id)
-    );
-    """)
-
-    # 배정 테이블
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS assignments (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        booking_id INTEGER,
         instructor_id INTEGER,
-        start_dt TEXT NOT NULL,
-        end_dt TEXT NOT NULL,
-        FOREIGN KEY(booking_id) REFERENCES bookings(id),
+        FOREIGN KEY(customer_id) REFERENCES customers(id),
         FOREIGN KEY(instructor_id) REFERENCES instructors(id)
-    );
+    )
     """)
 
     conn.commit()
     conn.close()
 
 
-# CRUD
+# Instructor CRUD
 def get_instructors():
     conn = sqlite3.connect(DB_FILE)
     cur = conn.cursor()
@@ -97,3 +83,29 @@ def delete_instructor(iid):
     cur.execute("DELETE FROM instructors WHERE id=?", (iid,))
     conn.commit()
     conn.close()
+
+
+# Customer
+def add_booking(customer_id, date, start_time, duration_minutes, lesson_type, level, people_count, memo, instructor_id):
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO bookings (customer_id, date, start_time, duration_minutes, lesson_type, level, people_count, memo, instructor_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+    """, (customer_id, date, start_time, duration_minutes, lesson_type, level, people_count, memo, instructor_id))
+    conn.commit()
+    conn.close()
+
+def get_bookings():
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT b.id, c.name, c.phone, b.date, b.start_time, b.duration_minutes,
+               b.lesson_type, b.level, b.people_count, b.memo, i.name
+        FROM bookings b
+        JOIN customers c ON b.customer_id = c.id
+        LEFT JOIN instructors i ON b.instructor_id = i.id
+    """)
+    rows = cur.fetchall()
+    conn.close()
+    return rows
