@@ -11,7 +11,7 @@ from ui_reservation import ReservationTab
 class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
-        self.setWindowTitle("스키 강습 관리 프로그램")
+        self.setWindowTitle("Ski Tour Management System")
         self.resize(1000, 700)
 
         self.tabs = QTabWidget()
