@@ -1,32 +1,40 @@
 import sqlite3
-from pathlib import Path
+from sqlite3 import Connection
 
-DB_FILE = Path("ski_lesson.db")
+DB_FILE = "SkiTourApp.db"
+
+
+def get_conn() -> Connection:
+    conn = sqlite3.connect(DB_FILE)
+    return conn
+
 
 def init_db():
-    conn = sqlite3.connect(DB_FILE)
+    conn = get_conn()
     cur = conn.cursor()
-
-    # 강사 테이블
-    cur.execute("""
-    CREATE TABLE IF NOT EXISTS instructors (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        name TEXT NOT NULL,
-        phone TEXT,
-        note TEXT
-    )
-    """)
 
     # 고객 테이블
     cur.execute("""
     CREATE TABLE IF NOT EXISTS customers (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL,
-        phone TEXT
+        phone TEXT NOT NULL
     )
     """)
 
-    # 예약(강습) 테이블
+    # 강사 테이블
+    cur.execute("""
+    CREATE TABLE IF NOT EXISTS instructors (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        name TEXT NOT NULL,
+        can_ski INTEGER DEFAULT 1,
+        can_snowboard INTEGER DEFAULT 1,
+        can_teach_english INTEGER DEFAULT 0,
+        active INTEGER DEFAULT 1
+    )
+    """)
+
+    # 예약 테이블
     cur.execute("""
     CREATE TABLE IF NOT EXISTS bookings (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -48,64 +56,112 @@ def init_db():
     conn.close()
 
 
-# Instructor CRUD
+# ----- 고객 관련 -----
+def add_customer(name, phone):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("INSERT INTO customers (name, phone) VALUES (?, ?)", (name, phone))
+    conn.commit()
+    cid = cur.lastrowid
+    conn.close()
+    return cid
+
+
+def find_customer(name, phone):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("SELECT id FROM customers WHERE name=? AND phone=?", (name, phone))
+    row = cur.fetchone()
+    conn.close()
+    return row[0] if row else None
+
+
+# ----- 강사 관련 -----
 def get_instructors():
-    conn = sqlite3.connect(DB_FILE)
+    conn = get_conn()
     cur = conn.cursor()
     cur.execute("SELECT id, name, can_ski, can_snowboard, can_teach_english, active FROM instructors")
     rows = cur.fetchall()
     conn.close()
     return rows
 
-def add_instructor(name, can_ski=True, can_snowboard=False, can_teach_english=False, active=True):
-    conn = sqlite3.connect(DB_FILE)
+
+def add_instructor(name, can_ski=1, can_snowboard=1, can_teach_english=0, active=1):
+    conn = get_conn()
     cur = conn.cursor()
     cur.execute("""
         INSERT INTO instructors (name, can_ski, can_snowboard, can_teach_english, active)
-        VALUES (?, ?, ?, ?, ?)
-    """, (name, int(can_ski), int(can_snowboard), int(can_teach_english), int(active)))
+        VALUES (?, ?, ?, ?, ?)""", (name, can_ski, can_snowboard, can_teach_english, active))
     conn.commit()
     conn.close()
 
-def update_instructor(iid, name, can_ski, can_snowboard, can_teach_english, active):
-    conn = sqlite3.connect(DB_FILE)
+
+def update_instructor(inst_id, name, can_ski, can_snowboard, can_teach_english, active):
+    conn = get_conn()
     cur = conn.cursor()
     cur.execute("""
         UPDATE instructors SET name=?, can_ski=?, can_snowboard=?, can_teach_english=?, active=?
-        WHERE id=?
-    """, (name, int(can_ski), int(can_snowboard), int(can_teach_english), int(active), iid))
+        WHERE id=?""", (name, can_ski, can_snowboard, can_teach_english, active, inst_id))
     conn.commit()
     conn.close()
 
-def delete_instructor(iid):
-    conn = sqlite3.connect(DB_FILE)
+
+def delete_instructor(inst_id):
+    conn = get_conn()
     cur = conn.cursor()
-    cur.execute("DELETE FROM instructors WHERE id=?", (iid,))
+    cur.execute("DELETE FROM instructors WHERE id=?", (inst_id,))
     conn.commit()
     conn.close()
 
 
-# Customer
-def add_booking(customer_id, date, start_time, duration_minutes, lesson_type, level, people_count, memo, instructor_id):
-    conn = sqlite3.connect(DB_FILE)
+# ----- 예약 관련 -----
+def add_booking(customer_id, date, start_time, duration_minutes,
+                lesson_type, level, people_count, memo, instructor_id):
+    conn = get_conn()
     cur = conn.cursor()
     cur.execute("""
-        INSERT INTO bookings (customer_id, date, start_time, duration_minutes, lesson_type, level, people_count, memo, instructor_id)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-    """, (customer_id, date, start_time, duration_minutes, lesson_type, level, people_count, memo, instructor_id))
+        INSERT INTO bookings
+        (customer_id, date, start_time, duration_minutes, lesson_type, level, people_count, memo, instructor_id)
+        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+                (customer_id, date, start_time, duration_minutes, lesson_type, level, people_count, memo, instructor_id))
     conn.commit()
     conn.close()
 
+
 def get_bookings():
-    conn = sqlite3.connect(DB_FILE)
+    conn = get_conn()
     cur = conn.cursor()
     cur.execute("""
         SELECT b.id, c.name, c.phone, b.date, b.start_time, b.duration_minutes,
-               b.lesson_type, b.level, b.people_count, b.memo, i.name
+               b.lesson_type, b.level, b.people_count, b.memo,
+               i.name
         FROM bookings b
-        JOIN customers c ON b.customer_id = c.id
+        LEFT JOIN customers c ON b.customer_id = c.id
         LEFT JOIN instructors i ON b.instructor_id = i.id
     """)
     rows = cur.fetchall()
     conn.close()
     return rows
+
+
+def update_booking(booking_id, customer_id, date, start_time, duration_minutes,
+                   lesson_type, level, people_count, memo, instructor_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        UPDATE bookings
+        SET customer_id=?, date=?, start_time=?, duration_minutes=?, lesson_type=?, level=?,
+            people_count=?, memo=?, instructor_id=?
+        WHERE id=?
+    """, (customer_id, date, start_time, duration_minutes, lesson_type, level,
+          people_count, memo, instructor_id, booking_id))
+    conn.commit()
+    conn.close()
+
+
+def delete_booking(booking_id):
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("DELETE FROM bookings WHERE id=?", (booking_id,))
+    conn.commit()
+    conn.close()
