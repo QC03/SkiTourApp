@@ -144,6 +144,26 @@ def get_bookings():
     return rows
 
 
+def get_bookings_by_date(date: str):
+    """
+    지정한 날짜(date: "YYYY-MM-DD") 예약만 반환
+    반환값: (id, customer_name, phone, date, start_time, duration, lesson_type, level, people_count, memo, instructor_id)
+    """
+    conn = get_conn()
+    cur = conn.cursor()
+    cur.execute("""
+        SELECT b.id, c.name, c.phone, b.date, b.start_time, b.duration_minutes,
+               b.lesson_type, b.level, b.people_count, b.memo, b.instructor_id
+        FROM bookings b
+        LEFT JOIN customers c ON b.customer_id = c.id
+        WHERE b.date = ?
+        ORDER BY b.start_time
+    """, (date,))
+    rows = cur.fetchall()
+    conn.close()
+    return rows
+
+
 def update_booking(booking_id, customer_id, date, start_time, duration_minutes,
                    lesson_type, level, people_count, memo, instructor_id):
     conn = get_conn()
