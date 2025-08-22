@@ -8,6 +8,7 @@ from PyQt6.QtCore import Qt
 
 from db import init_db
 from ui_instructor import InstructorTab
+from ui_booking import BookingTab
 
 import sys
 
@@ -63,6 +64,9 @@ class MainWindow(QMainWindow):
         self.tabs.addTab(QWidget(), "출력")
         self.tabs.addTab(QWidget(), "설정")
         self.setCentralWidget(self.tabs)
+
+        # Connect to ui_booking.py
+        self.tabs.addTab(BookingTab(), "예약 관리")
 
     def closeEvent(self, e):
         # 이후 단계에서 저장/확인 로직을 추가할 수 있습니다.

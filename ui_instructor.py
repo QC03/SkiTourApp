@@ -3,6 +3,7 @@ from PyQt6.QtWidgets import (
     QCheckBox, QTableWidget, QTableWidgetItem, QMessageBox
 )
 import db
+from ui_booking import BookingTab
 
 class InstructorTab(QWidget):
     def __init__(self):
@@ -53,6 +54,9 @@ class InstructorTab(QWidget):
         for r, row in enumerate(rows):
             for c, val in enumerate(row):
                 self.table.setItem(r, c, QTableWidgetItem(str(val)))
+        
+        # refesh booking tab
+        BookingTab.load_instructors()
 
     def on_row_select(self, row, col):
         self.selected_id = int(self.table.item(row, 0).text())
