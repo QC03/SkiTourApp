@@ -133,7 +133,7 @@ def get_bookings():
     cur = conn.cursor()
     cur.execute("""
         SELECT b.id, c.name, c.phone, b.date, b.start_time, b.duration_minutes,
-               b.lesson_type, b.level, b.people_count, b.memo,
+               b.lesson_type, b.level, b.people_count, b.memo, b.instructor_id,
                i.name
         FROM bookings b
         LEFT JOIN customers c ON b.customer_id = c.id

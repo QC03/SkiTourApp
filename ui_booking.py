@@ -1,11 +1,10 @@
 from PyQt6.QtWidgets import (
     QWidget, QVBoxLayout, QFormLayout, QLineEdit, QComboBox,
     QPushButton, QDateEdit, QSpinBox, QTextEdit, QMessageBox,
-    QTableWidget, QTableWidgetItem, QHBoxLayout
+    QTableWidget, QTableWidgetItem, QHBoxLayout, QLabel
 )
 from PyQt6.QtCore import QDate
 import db
-
 
 class BookingTab(QWidget):
     def __init__(self):
@@ -28,12 +27,12 @@ class BookingTab(QWidget):
         self.date_edit.setDate(QDate.currentDate())
         self.date_edit.setCalendarPopup(True)
 
-        # 시작 시간 (1시간 단위)
+        # 시작 시간 (1시간 단위, 24시간)
         self.time_combo = QComboBox()
         for h in range(6, 23):
             self.time_combo.addItem(f"{h:02d}:00")
 
-        # 강습 시간
+        # 강습 시간 (시간 단위)
         self.duration = QSpinBox()
         self.duration.setRange(1, 8)
         self.duration.setValue(2)
@@ -96,7 +95,7 @@ class BookingTab(QWidget):
         self.refresh_table()
 
     # ---------------------------
-    # 재방문 고객 표시 기능
+    # 재방문 고객 표시
     # ---------------------------
     def check_returning_customer(self):
         name = self.customer_name.text().strip()
@@ -120,6 +119,29 @@ class BookingTab(QWidget):
             self.instructor_combo.addItem(inst[1], inst[0])
 
     # ---------------------------
+    # 강사 중복 체크
+    # ---------------------------
+    def check_instructor_overlap(self, instructor_id, date, start_time, duration, exclude_id=None):
+        new_start_hour = int(start_time.split(":")[0])
+        new_end_hour = new_start_hour + duration // 60
+
+        bookings = db.get_bookings()
+        for b in bookings:
+            b_date = b[3]
+            b_start_hour = int(b[4].split(":")[0])
+            b_end_hour = b_start_hour + int(b[5]) // 60
+            b_instructor_id = b[10]
+
+            if b[0] == exclude_id:
+                continue
+            if b_date != date:
+                continue
+            if b_instructor_id == instructor_id:
+                if not (new_end_hour <= b_start_hour or new_start_hour >= b_end_hour):
+                    return True
+        return False
+
+    # ---------------------------
     # 예약 저장
     # ---------------------------
     def save_booking(self):
@@ -141,15 +163,20 @@ class BookingTab(QWidget):
         if not customer_id:
             customer_id = db.add_customer(name, phone)
 
-        # 예약 중복 체크
-        if self.check_overlap(customer_id, date, start_time, duration):
-            QMessageBox.warning(self, "중복 예약", "해당 시간대에 이미 예약이 존재합니다.")
-            return
-
-        # 연장 예약 시 동일 강사 자동 배정
+        # 연장 예약 시 동일 강사 자동 선택
         instructor_id = self.get_previous_instructor(customer_id, date)
         if instructor_id is None:
             instructor_id = self.instructor_combo.currentData()
+
+        # 고객 중복 체크
+        if self.check_overlap(customer_id, date, start_time, duration):
+            QMessageBox.warning(self, "중복 예약", "같은 고객이 이미 예약되어 있습니다.")
+            return
+
+        # 강사 중복 체크
+        if self.check_instructor_overlap(instructor_id, date, start_time, duration):
+            QMessageBox.warning(self, "중복 예약", f"{self.instructor_combo.currentText()} 강사는 이미 이 시간대에 예약이 있습니다.")
+            return
 
         db.add_booking(customer_id, date, start_time, duration,
                        lesson_type, level, people_count, memo, instructor_id)
@@ -158,25 +185,91 @@ class BookingTab(QWidget):
         self.refresh_table()
 
     # ---------------------------
-    # 예약 중복 체크
+    # 예약 수정
+    # ---------------------------
+    def update_booking(self):
+        if not self.selected_id:
+            return
+
+        name = self.customer_name.text().strip()
+        phone = self.customer_phone.text().strip()
+        date = self.date_edit.date().toString("yyyy-MM-dd")
+        start_time = self.time_combo.currentText()
+        duration = self.duration.value() * 60
+        lesson_type = self.lesson_type.text().strip()
+        level = self.level.currentText()
+        people_count = self.people_count.value()
+        memo = self.memo.toPlainText().strip()
+
+        if not name or not phone:
+            QMessageBox.warning(self, "오류", "고객 이름과 전화번호를 입력하세요.")
+            return
+
+        customer_id = db.find_customer(name, phone)
+        if not customer_id:
+            customer_id = db.add_customer(name, phone)
+
+        # 연장 예약 시 동일 강사 자동 선택
+        instructor_id = self.get_previous_instructor(customer_id, date)
+        if instructor_id is None:
+            instructor_id = self.instructor_combo.currentData()
+
+        # 고객 중복 체크 (수정 중인 예약 제외)
+        if self.check_overlap_update(customer_id, date, start_time, duration, self.selected_id):
+            QMessageBox.warning(self, "중복 예약", "같은 고객이 이미 예약되어 있습니다.")
+            return
+
+        # 강사 중복 체크 (수정 중인 예약 제외)
+        if self.check_instructor_overlap(instructor_id, date, start_time, duration, self.selected_id):
+            QMessageBox.warning(self, "중복 예약", f"{self.instructor_combo.currentText()} 강사는 이미 이 시간대에 예약이 있습니다.")
+            return
+
+        db.update_booking(self.selected_id, customer_id, date, start_time, duration,
+                          lesson_type, level, people_count, memo, instructor_id)
+        QMessageBox.information(self, "완료", "예약이 수정되었습니다.")
+        self.clear_form()
+        self.refresh_table()
+
+    # ---------------------------
+    # 고객 중복 체크 (저장 전)
     # ---------------------------
     def check_overlap(self, customer_id, date, start_time, duration):
-        """
-        같은 고객이 같은 날짜/시간에 예약이 겹치는지 체크
-        """
         bookings = db.get_bookings()
         new_start_hour = int(start_time.split(":")[0])
         new_end_hour = new_start_hour + duration // 60
 
         for b in bookings:
             b_customer_id = db.find_customer(b[1], b[2])
-            if b_customer_id != customer_id:
-                continue
             b_date = b[3]
             b_start_hour = int(b[4].split(":")[0])
             b_end_hour = b_start_hour + int(b[5]) // 60
-            if b_date == date:
-                # 시간 겹침 확인
+
+            if b_date != date:
+                continue
+            if b_customer_id == customer_id:
+                if not (new_end_hour <= b_start_hour or new_start_hour >= b_end_hour):
+                    return True
+        return False
+
+    # ---------------------------
+    # 고객 중복 체크 (수정 전)
+    # ---------------------------
+    def check_overlap_update(self, customer_id, date, start_time, duration, exclude_id):
+        bookings = db.get_bookings()
+        new_start_hour = int(start_time.split(":")[0])
+        new_end_hour = new_start_hour + duration // 60
+
+        for b in bookings:
+            if b[0] == exclude_id:
+                continue
+            b_customer_id = db.find_customer(b[1], b[2])
+            b_date = b[3]
+            b_start_hour = int(b[4].split(":")[0])
+            b_end_hour = b_start_hour + int(b[5]) // 60
+
+            if b_date != date:
+                continue
+            if b_customer_id == customer_id:
                 if not (new_end_hour <= b_start_hour or new_start_hour >= b_end_hour):
                     return True
         return False
@@ -194,19 +287,12 @@ class BookingTab(QWidget):
                 continue
             b_date = QDate.fromString(b[3], "yyyy-MM-dd")
             if b_date.daysTo(new_dt) in (0, 1):
-                # 기존 강사 가져오기
-                conn = db.get_conn()
-                cur = conn.cursor()
-                cur.execute("SELECT instructor_id FROM bookings WHERE id=?", (b[0],))
-                row = cur.fetchone()
-                conn.close()
-                if row and row[0]:
-                    prev_instructor_id = row[0]
-                    break
+                prev_instructor_id = b[10]
+                break
         return prev_instructor_id
 
     # ---------------------------
-    # 나머지 기존 함수
+    # 테이블 갱신 / 폼 초기화 / 선택
     # ---------------------------
     def refresh_table(self):
         rows = db.get_bookings()
@@ -243,37 +329,6 @@ class BookingTab(QWidget):
         self.people_count.setValue(int(self.table.item(row, 8).text()))
         self.memo.setPlainText(self.table.item(row, 9).text())
         self.instructor_combo.setCurrentText(self.table.item(row, 10).text() if self.table.item(row, 10) else "")
-
-    def update_booking(self):
-        if not self.selected_id:
-            return
-        name = self.customer_name.text().strip()
-        phone = self.customer_phone.text().strip()
-        date = self.date_edit.date().toString("yyyy-MM-dd")
-        start_time = self.time_combo.currentText()
-        duration = self.duration.value() * 60
-        lesson_type = self.lesson_type.text().strip()
-        level = self.level.currentText()
-        people_count = self.people_count.value()
-        memo = self.memo.toPlainText().strip()
-
-        customer_id = db.find_customer(name, phone)
-        if not customer_id:
-            customer_id = db.add_customer(name, phone)
-
-        if self.check_overlap(customer_id, date, start_time, duration):
-            QMessageBox.warning(self, "중복 예약", "해당 시간대에 이미 예약이 존재합니다.")
-            return
-
-        instructor_id = self.get_previous_instructor(customer_id, date)
-        if instructor_id is None:
-            instructor_id = self.instructor_combo.currentData()
-
-        db.update_booking(self.selected_id, customer_id, date, start_time, duration,
-                          lesson_type, level, people_count, memo, instructor_id)
-        QMessageBox.information(self, "완료", "예약이 수정되었습니다.")
-        self.clear_form()
-        self.refresh_table()
 
     def delete_booking(self):
         if not self.selected_id:
