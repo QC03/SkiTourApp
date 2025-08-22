@@ -26,12 +26,18 @@ class BookingTab(QWidget):
         self.date_edit.setCalendarPopup(True)
 
         self.time_edit = QTimeEdit()
-        self.time_edit.setTime(QTime.currentTime())
+        self.time_edit.setTime("HH:mm")
+        self.time_edit.setTime(QTime.currentTime().setHMS(QTime.currentTime().hour(), 0, 0))
+
+        self.time_edit.setMinimumTime(QTime(6, 0))   # After AM 6:00
+        self.time_edit.setMaximumTime(QTime(22, 0))  # Before PM 10:00
+        self.time_edit.setSingleStep(60) # 1시간 단위로 조정
 
         self.duration = QSpinBox()
-        self.duration.setRange(60, 480)  # 1시간 ~ 8시간
-        self.duration.setSingleStep(30)
-        self.duration.setValue(120)  # 기본 2시간
+        self.duration.setRange(1, 8)  # 1시간 ~ 8시간
+        self.duration.setValue(2)  # 기본 2시간
+        self.duration.setSuffix(" 시간")
+        self.duration.setSingleStep(60) # 1시간 단위로 조정
 
         # 강습 정보
         self.lesson_type = QLineEdit()
@@ -79,7 +85,7 @@ class BookingTab(QWidget):
         phone = self.customer_phone.text().strip()
         date = self.date_edit.date().toString("yyyy-MM-dd")
         start_time = self.time_edit.time().toString("HH:mm")
-        duration = self.duration.value()
+        duration = self.duration.value() * 60
         lesson_type = self.lesson_type.text().strip()
         level = self.level.currentText()
         people_count = self.people_count.value()
