@@ -72,14 +72,14 @@ class BookingTab(QWidget):
         main_layout.addWidget(self.save_btn)
 
         # 예약 테이블
-        self.table = QTableWidget()
-        self.table.setColumnCount(11)
-        self.table.setHorizontalHeaderLabels([
-            "ID", "고객 이름", "전화번호", "날짜", "시작 시간", "강습 시간(분)",
-            "강습 종류", "레벨", "인원 수", "메모", "강사"
-        ])
-        self.table.cellClicked.connect(self.on_row_select)
-        main_layout.addWidget(self.table)
+        #self.table = QTableWidget()
+        #self.table.setColumnCount(11)
+        #self.table.setHorizontalHeaderLabels([
+        #    "ID", "고객 이름", "전화번호", "날짜", "시작 시간", "강습 시간(분)",
+        #    "강습 종류", "레벨", "인원 수", "메모", "강사"
+        #])
+        #self.table.cellClicked.connect(self.on_row_select)
+        #main_layout.addWidget(self.table)
 
         # 수정/삭제 버튼
         btn_layout = QHBoxLayout()
@@ -92,7 +92,7 @@ class BookingTab(QWidget):
         main_layout.addLayout(btn_layout)
 
         self.setLayout(main_layout)
-        self.refresh_table()
+        #self.refresh_table()
 
     # ---------------------------
     # 재방문 고객 표시
@@ -116,6 +116,8 @@ class BookingTab(QWidget):
         self.instructor_combo.clear()
         instructors = db.get_instructors()
         for inst in instructors:
+            if(inst[5] == 0): # 비활성 강사는 제외
+                continue
             self.instructor_combo.addItem(inst[1], inst[0])
 
     # ---------------------------
@@ -182,7 +184,7 @@ class BookingTab(QWidget):
                        lesson_type, level, people_count, memo, instructor_id)
         QMessageBox.information(self, "완료", "예약이 저장되었습니다.")
         self.clear_form()
-        self.refresh_table()
+        #self.refresh_table()
 
     # ---------------------------
     # 예약 수정
@@ -228,7 +230,7 @@ class BookingTab(QWidget):
                           lesson_type, level, people_count, memo, instructor_id)
         QMessageBox.information(self, "완료", "예약이 수정되었습니다.")
         self.clear_form()
-        self.refresh_table()
+        #self.refresh_table()
 
     # ---------------------------
     # 고객 중복 체크 (저장 전)
@@ -294,12 +296,12 @@ class BookingTab(QWidget):
     # ---------------------------
     # 테이블 갱신 / 폼 초기화 / 선택
     # ---------------------------
-    def refresh_table(self):
-        rows = db.get_bookings()
-        self.table.setRowCount(len(rows))
-        for r, row in enumerate(rows):
-            for c, val in enumerate(row):
-                self.table.setItem(r, c, QTableWidgetItem(str(val)))
+    #def refresh_table(self):
+    #    rows = db.get_bookings()
+    #    self.table.setRowCount(len(rows))
+    #    for r, row in enumerate(rows):
+    #        for c, val in enumerate(row):
+    #            self.table.setItem(r, c, QTableWidgetItem(str(val)))
 
     def clear_form(self):
         self.customer_name.clear()
@@ -316,19 +318,19 @@ class BookingTab(QWidget):
             self.instructor_combo.setCurrentIndex(0)
         self.selected_id = None
 
-    def on_row_select(self, row, col):
-        self.selected_id = int(self.table.item(row, 0).text())
-        self.customer_name.setText(self.table.item(row, 1).text())
-        self.customer_phone.setText(self.table.item(row, 2).text())
-        self.check_returning_customer()
-        self.date_edit.setDate(QDate.fromString(self.table.item(row, 3).text(), "yyyy-MM-dd"))
-        self.time_combo.setCurrentText(self.table.item(row, 4).text())
-        self.duration.setValue(int(self.table.item(row, 5).text()) // 60)
-        self.lesson_type.setText(self.table.item(row, 6).text())
-        self.level.setCurrentText(self.table.item(row, 7).text())
-        self.people_count.setValue(int(self.table.item(row, 8).text()))
-        self.memo.setPlainText(self.table.item(row, 9).text())
-        self.instructor_combo.setCurrentText(self.table.item(row, 10).text() if self.table.item(row, 10) else "")
+    #def on_row_select(self, row, col):
+    #    self.selected_id = int(self.table.item(row, 0).text())
+    #    self.customer_name.setText(self.table.item(row, 1).text())
+    #    self.customer_phone.setText(self.table.item(row, 2).text())
+    #    self.check_returning_customer()
+    #    self.date_edit.setDate(QDate.fromString(self.table.item(row, 3).text(), "yyyy-MM-dd"))
+    #    self.time_combo.setCurrentText(self.table.item(row, 4).text())
+    #    self.duration.setValue(int(self.table.item(row, 5).text()) // 60)
+    #    self.lesson_type.setText(self.table.item(row, 6).text())
+    #    self.level.setCurrentText(self.table.item(row, 7).text())
+    #    self.people_count.setValue(int(self.table.item(row, 8).text()))
+    #    self.memo.setPlainText(self.table.item(row, 9).text())
+    #    self.instructor_combo.setCurrentText(self.table.item(row, 10).text() if self.table.item(row, 10) else "")
 
     def delete_booking(self):
         if not self.selected_id:
@@ -336,4 +338,4 @@ class BookingTab(QWidget):
         db.delete_booking(self.selected_id)
         QMessageBox.information(self, "완료", "예약이 삭제되었습니다.")
         self.clear_form()
-        self.refresh_table()
+        #self.refresh_table()
