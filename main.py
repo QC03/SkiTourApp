@@ -3,11 +3,23 @@ from PyQt6.QtWidgets import (
     QApplication, QMainWindow, QWidget, QTabWidget, QVBoxLayout,
     QLabel, QStatusBar, QToolBar
 )
-from PyQt6.QtGui import QAction   # ✅ 여기로 이동
+from PyQt6.QtGui import QAction
 from PyQt6.QtCore import Qt
+
+from db import init_db
+
 import sys
 
-APP_TITLE = "Ski Lesson Scheduler (Step 1)"
+# Ready To Database
+class MainWindow(QMainWindow):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle(APP_TITLE)
+        self.resize(1100, 700)
+
+        init_db()
+
+APP_TITLE = "Ski Lesson Scheduler"
 
 def placeholder_tab(title: str, subtitle: str = "") -> QWidget:
     w = QWidget()
