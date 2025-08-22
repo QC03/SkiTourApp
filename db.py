@@ -60,3 +60,40 @@ def init_db():
 
     conn.commit()
     conn.close()
+
+
+# CRUD
+def get_instructors():
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    cur.execute("SELECT id, name, can_ski, can_snowboard, can_teach_english, active FROM instructors")
+    rows = cur.fetchall()
+    conn.close()
+    return rows
+
+def add_instructor(name, can_ski=True, can_snowboard=False, can_teach_english=False, active=True):
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    cur.execute("""
+        INSERT INTO instructors (name, can_ski, can_snowboard, can_teach_english, active)
+        VALUES (?, ?, ?, ?, ?)
+    """, (name, int(can_ski), int(can_snowboard), int(can_teach_english), int(active)))
+    conn.commit()
+    conn.close()
+
+def update_instructor(iid, name, can_ski, can_snowboard, can_teach_english, active):
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    cur.execute("""
+        UPDATE instructors SET name=?, can_ski=?, can_snowboard=?, can_teach_english=?, active=?
+        WHERE id=?
+    """, (name, int(can_ski), int(can_snowboard), int(can_teach_english), int(active), iid))
+    conn.commit()
+    conn.close()
+
+def delete_instructor(iid):
+    conn = sqlite3.connect(DB_FILE)
+    cur = conn.cursor()
+    cur.execute("DELETE FROM instructors WHERE id=?", (iid,))
+    conn.commit()
+    conn.close()
