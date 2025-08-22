@@ -10,14 +10,6 @@ from db import init_db
 
 import sys
 
-# Ready To Database
-class MainWindow(QMainWindow):
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle(APP_TITLE)
-        self.resize(1100, 700)
-
-        init_db()
 
 APP_TITLE = "Ski Lesson Scheduler"
 
@@ -58,6 +50,9 @@ class MainWindow(QMainWindow):
         sb = QStatusBar()
         sb.showMessage("Step 1: 프로젝트 골격 준비 완료")
         self.setStatusBar(sb)
+
+        # Ready To Database
+        init_db()
 
     def closeEvent(self, e):
         # 이후 단계에서 저장/확인 로직을 추가할 수 있습니다.
